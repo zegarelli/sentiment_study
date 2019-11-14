@@ -18,7 +18,7 @@ bears_stats = data_set['bears_stats']
 
 
 def mprint(text):
-    with open("output.txt", "a") as f:
+    with open(log_file, "a") as f:
         f.write('\n{}'.format(text))
         print(text)
 

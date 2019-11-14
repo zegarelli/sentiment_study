@@ -11,20 +11,19 @@ class TradeDay:
         self.prior_week_bears = date_utils.get_prior_week(self.date, Bears)
         self.spx = date_utils.get_SPX_by_date(self.date, SPX)
         self.spx91 = date_utils.get_SPX_by_date_delta(self.date, 91, SPX)
+        self.spx182 = None
+        self.spx365 = None
+        self.spx91_return = None
+        self.spx182_return = None
+        self.spx365_return = None
         if self.spx91:
-            self.spx91_return = round((self.spx91/self.spx - 1) * 100, 2)
+            self.spx91_return = round((self.spx91/self.spx - 1), 4)
             self.spx182 = date_utils.get_SPX_by_date_delta(self.date, 182, SPX)
             if self.spx182:
-                self.spx182_return = round((self.spx182/self.spx - 1) * 100, 2)
+                self.spx182_return = round((self.spx182/self.spx - 1), 4)
                 self.spx365 = date_utils.get_SPX_by_date_delta(self.date, 365, SPX)
                 if self.spx365:
-                    self.spx365_return = round((self.spx365/self.spx - 1) * 100, 2)
-                else:
-                    self.spx365_return = None
-            else:
-                self.spx182_return = None
-        else:
-            self.spx91_return = None
+                    self.spx365_return = round((self.spx365/self.spx - 1), 4)
 
     def __repr__(self):
         return '{} - CPC: {}, Bulls: {}, Bears: {}, SPX: {}, SPX91: {}%, SPX182: {}%, SPX365: {}%'.format(
