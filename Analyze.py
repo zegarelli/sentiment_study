@@ -41,47 +41,79 @@ def test_cpc(day, threshold, cpc_gt):
             return True
 
 
-def test_condition(day, threshold, condition_gt):
-    if not condition_gt:
-        if day.prior_week_bulls['close'] < bulls_stats['mean'] - threshold * bulls_stats['std']:
-            return True
+def test_condition(day, threshold, condition_gt, bears):
+    if not bears:
+        if not condition_gt:
+            if day.prior_week_bulls['close'] < bulls_stats['mean'] - threshold * bulls_stats['std']:
+                return True
+        else:
+            if day.prior_week_bulls['close'] > bulls_stats['mean'] + threshold * bulls_stats['std']:
+                return True
     else:
-        if day.prior_week_bulls['close'] > bulls_stats['mean'] + threshold * bulls_stats['std']:
-            return True
+        if not condition_gt:
+            if day.prior_week_bears['close'] < bears_stats['mean'] - threshold * bears_stats['std']:
+                return True
+        else:
+            if day.prior_week_bears['close'] > bears_stats['mean'] + threshold * bears_stats['std']:
+                return True
 
 
-def analyze(cpc_treshold, condition_treshold=None, cpc_gt=None, condition_gt=None):
-    just_cpc = []
-    cpc_and_bulls = []
+def analyze(cpc_treshold, condition_treshold=None, cpc_gt=None, condition_gt=None, bears=None):
+    output = []
     for day in days:
-        if not cpc_gt:
-            if test_cpc(day, cpc_treshold, cpc_gt):
-                just_cpc.append(day)
-
-                if condition_treshold and test_condition(day, condition_treshold, condition_gt):
-                    cpc_and_bulls.append(day)
-
-    if not condition_treshold:
-        mprint('\n-----------  CPC Treshold = mean - {}*stdev  -----------'.format(cpc_treshold))
-        mprint('Count: {}'.format(len(just_cpc)))
-        for key, value in stats.calculate(just_cpc).items():
-            mprint('{}: {}'.format(key, value))
-        for cpc in just_cpc:
-            mprint(cpc)
-    else:
-        mprint('\n-----------  CPC Treshold = mean - {}*stdev & Bulls Treshold = mean + {}*stdev  -----------'.format(cpc_treshold, condition_treshold))
-        mprint('Count: {}'.format(len(cpc_and_bulls)))
-        for key, value in stats.calculate(cpc_and_bulls).items():
-            mprint('{}: {}'.format(key, value))
-        for cpcb in cpc_and_bulls:
-            mprint(cpcb)
+        if test_cpc(day, cpc_treshold, cpc_gt):
+            if condition_treshold:
+                if test_condition(day, condition_treshold, condition_gt, bears):
+                    output.append(day)
+            else:
+                output.append(day)
+    cpc_operator = '< Mean-'
+    if cpc_gt:
+        cpc_operator = '> Mean+'
+    condition_operator = '< Mean-'
+    if condition_gt:
+        condition_operator = '> Mean+'
+    condition_name = 'Bulls'
+    if bears:
+        condition_name = 'Bears'
+    test_name = 'CPC {}{}xSTD'.format(cpc_operator, cpc_treshold)
+    if condition_treshold:
+        test_name += ' & {} {}{}xSTD'.format(condition_name, condition_operator, condition_treshold)
+    stat = stats.calculate(output)
+    mprint('\n{},{},{},{},{},{},{},{}'.format(test_name, len(output), stat['spx91_mean'], stat['spx91_std'],
+                                            stat['spx182_mean'], stat['spx182_std'],
+                                            stat['spx365_mean'], stat['spx365_std']))
+    with open(test_name + '.csv', "a") as f:
+        f.write('Date,CPC,Bulls,Bears,SPX91,SPX182,SPX365')
+        for outday in output:
+            f.write('\n{},{},{},{},{},{},{}'.format(outday.date, outday.cpc, outday.prior_week_bulls['close'],
+                                                    outday.prior_week_bears['close'], outday.spx91_return,
+                                                    outday.spx182_return, outday.spx365_return))
 
 
 analyze(cpc_treshold=2)
+analyze(cpc_treshold=1.5)
+analyze(cpc_treshold=2, cpc_gt=True)
+analyze(cpc_treshold=1.5, cpc_gt=True)
+
 analyze(cpc_treshold=2, condition_treshold=2, condition_gt=True)
 analyze(cpc_treshold=2, condition_treshold=1.75, condition_gt=True)
 analyze(cpc_treshold=2, condition_treshold=1.5, condition_gt=True)
-analyze(cpc_treshold=1.75)
-analyze(cpc_treshold=1.75, condition_treshold=2, condition_gt=True)
-analyze(cpc_treshold=1.75, condition_treshold=1.75, condition_gt=True)
-analyze(cpc_treshold=1.75, condition_treshold=1.5, condition_gt=True)
+analyze(cpc_treshold=2, condition_treshold=1.25, condition_gt=True)
+analyze(cpc_treshold=2, condition_treshold=1, condition_gt=True)
+analyze(cpc_treshold=1.5, condition_treshold=2, condition_gt=True)
+analyze(cpc_treshold=1.5, condition_treshold=1.5, condition_gt=True)
+analyze(cpc_treshold=1.5, condition_treshold=1, condition_gt=True)
+analyze(cpc_treshold=1, condition_treshold=2, condition_gt=True)
+analyze(cpc_treshold=1, condition_treshold=1.5, condition_gt=True)
+analyze(cpc_treshold=1, condition_treshold=1, condition_gt=True)
+
+analyze(cpc_treshold=2, cpc_gt=True, condition_treshold=2, condition_gt=True, bears=True)
+analyze(cpc_treshold=2, cpc_gt=True, condition_treshold=1.5, condition_gt=True, bears=True)
+analyze(cpc_treshold=2, cpc_gt=True, condition_treshold=1, condition_gt=True, bears=True)
+analyze(cpc_treshold=1.5, cpc_gt=True, condition_treshold=2, condition_gt=True, bears=True)
+analyze(cpc_treshold=1.5, cpc_gt=True, condition_treshold=1.5, condition_gt=True, bears=True)
+analyze(cpc_treshold=1.5, cpc_gt=True, condition_treshold=1, condition_gt=True, bears=True)
+analyze(cpc_treshold=1, cpc_gt=True, condition_treshold=2, condition_gt=True, bears=True)
+analyze(cpc_treshold=1, cpc_gt=True, condition_treshold=1.5, condition_gt=True, bears=True)
+analyze(cpc_treshold=1, cpc_gt=True, condition_treshold=1, condition_gt=True, bears=True)

@@ -27,7 +27,7 @@ class TradeDay:
 
     def __repr__(self):
         return '{} - CPC: {}, Bulls: {}, Bears: {}, SPX: {}, SPX91: {}%, SPX182: {}%, SPX365: {}%'.format(
-            self.date, self.cpc, self.prior_week_bulls['close'], self.prior_week_bears,
+            self.date, self.cpc, self.prior_week_bulls['close'], self.prior_week_bears['close'],
             self.spx, self.spx91_return, self.spx182_return, self.spx365_return
         )
 
@@ -114,33 +114,41 @@ def main():
         data[file]['raw'].reverse()
         data[file]['data'].reverse()
 
+    days_and_data = {
+        'days': [],
+        'CPC': [],
+        'Bulls': [],
+        'Bears': []
+    }
+    for cpc in data['CPC']['data']:
+        day = TradeDay(cpc, data['Bulls'], data['Bears'], data['SPX'])
+        days_and_data['days'].append(day)
+        days_and_data['CPC'].append(day.cpc)
+        days_and_data['Bulls'].append(day.prior_week_bulls['close'])
+        days_and_data['Bears'].append(day.prior_week_bears['close'])
+
+
     output = {
         'cpc_stats': {
-            'std': statistics.stdev(data['CPC']['raw']),
-            'mean': statistics.mean(data['CPC']['raw']),
-            'median': statistics.median(data['CPC']['raw']),
-            'max': max(data['CPC']['raw']),
-            'min': min(data['CPC']['raw'])
+            'std': statistics.stdev(days_and_data['CPC']),
+            'mean': statistics.mean(days_and_data['CPC']),
+            'max': max(days_and_data['CPC']),
+            'min': min(days_and_data['CPC'])
         },
         'bulls_stats': {
-            'std': statistics.stdev(data['Bulls']['raw']),
-            'mean': statistics.mean(data['Bulls']['raw']),
-            'median': statistics.median(data['Bulls']['raw']),
-            'max': max(data['Bulls']['raw']),
-            'min': min(data['Bulls']['raw'])
+            'std': statistics.stdev(days_and_data['Bulls']),
+            'mean': statistics.mean(days_and_data['Bulls']),
+            'max': max(days_and_data['Bulls']),
+            'min': min(days_and_data['Bulls'])
         },
         'bears_stats': {
-            'std': statistics.stdev(data['Bears']['raw']),
-            'mean': statistics.mean(data['Bears']['raw']),
-            'median': statistics.median(data['Bears']['raw']),
-            'max': max(data['Bears']['raw']),
-            'min': min(data['Bears']['raw'])
+            'std': statistics.stdev(days_and_data['Bears']),
+            'mean': statistics.mean(days_and_data['Bears']),
+            'max': max(days_and_data['Bears']),
+            'min': min(days_and_data['Bears'])
         },
-        'days': []
+        'days': days_and_data['days']
     }
-
-    for cpc in data['CPC']['data']:
-        output['days'].append(TradeDay(cpc, data['Bulls'], data['Bears'], data['SPX']))
 
     return output
 
