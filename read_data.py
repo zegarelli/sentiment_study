@@ -4,11 +4,12 @@ import date_utils
 
 
 class TradeDay:
-    def __init__(self, cpcDay, Bulls, Bears, SPX):
+    def __init__(self, cpcDay, Bulls, Bears, SPX, Spread):
         self.date = cpcDay['date']
         self.cpc = cpcDay['close']
         self.prior_week_bulls = date_utils.get_prior_week(self.date, Bulls)
         self.prior_week_bears = date_utils.get_prior_week(self.date, Bears)
+        self.prior_week_spread = date_utils.get_prior_week(self.date, Spread)
         self.spx = date_utils.get_SPX_by_date(self.date, SPX)
         self.spx91 = date_utils.get_SPX_by_date_delta(self.date, 91, SPX)
         self.spx182 = None
@@ -32,7 +33,7 @@ class TradeDay:
         )
 
 
-def main():
+def main(cpc_type=None, start_date=None):
     """
     Reads and formats the raw CSV files and returns them in a single data object
     """
@@ -52,23 +53,56 @@ def main():
                 'close': close
             })
 
-    file_path = '$CPC.csv'
-    file = 'CPC'
+    file_path = '${}.csv'.format(cpc_type)
+    file = cpc_type
+    with open(file_path, 'r') as f:
+        data[file] = {
+            'data': [],
+            'raw': []
+        }
+        contents = f.readlines()
+        for line in contents[2:]:
+            if cpc_type != 'ICBOETPCR':
+                line = line.replace(' ', '').split(',')
+                date = datetime.strptime(line[0], '%m/%d/%Y').date()
+                close = float(line[4])
+                data[file]['data'].append({
+                    'date': date,
+                    'close': close
+                })
+                data[file]['raw'].append(close)
+            else:
+                date = datetime.strptime(line.split(' ')[0], '%Y-%m-%d').date()
+                close = float(line.split(',')[1])
+                data[file]['data'].insert(0, {
+                    'date': date,
+                    'close': close
+                })
+                data[file]['raw'].insert(0, close)
+
+
+
+    file_path = 'Bull - Bear Spread.csv'
+    file = 'Spread'
     with open(file_path, 'r') as f:
         data[file] = {
             'data': [],
             'raw': []
                       }
         contents = f.readlines()
-        for line in contents[2:]:
+        for line in contents[1:]:
             line = line.replace(' ', '').split(',')
-            date = datetime.strptime(line[0], '%m/%d/%Y').date()
-            close = float(line[4])
+            date = datetime.strptime(line[0][:10], '%Y-%m-%d').date()
+            close = float(line[1])
             data[file]['data'].append({
                 'date': date,
                 'close': close
             })
             data[file]['raw'].append(close)
+
+        # Reverse these two pieces to match the other data sets
+        data[file]['raw'].reverse()
+        data[file]['data'].reverse()
 
     file_path = 'Total Bulls.csv'
     file = 'Bulls'
@@ -118,14 +152,18 @@ def main():
         'days': [],
         'CPC': [],
         'Bulls': [],
-        'Bears': []
+        'Bears': [],
+        'Spread': []
     }
-    for cpc in data['CPC']['data']:
-        day = TradeDay(cpc, data['Bulls'], data['Bears'], data['SPX'])
-        days_and_data['days'].append(day)
-        days_and_data['CPC'].append(day.cpc)
-        days_and_data['Bulls'].append(day.prior_week_bulls['close'])
-        days_and_data['Bears'].append(day.prior_week_bears['close'])
+
+    for cpc in data[cpc_type]['data']:
+        if not start_date or cpc['date'] > start_date:
+            day = TradeDay(cpc, data['Bulls'], data['Bears'], data['SPX'], data['Spread'])
+            days_and_data['days'].append(day)
+            days_and_data['CPC'].append(day.cpc)
+            days_and_data['Bulls'].append(day.prior_week_bulls['close'])
+            days_and_data['Bears'].append(day.prior_week_bears['close'])
+            days_and_data['Spread'].append(day.prior_week_spread['close'])
 
 
     output = {
@@ -146,6 +184,12 @@ def main():
             'mean': statistics.mean(days_and_data['Bears']),
             'max': max(days_and_data['Bears']),
             'min': min(days_and_data['Bears'])
+        },
+        'spread_stats': {
+            'std': statistics.stdev(days_and_data['Spread']),
+            'mean': statistics.mean(days_and_data['Spread']),
+            'max': max(days_and_data['Spread']),
+            'min': min(days_and_data['Spread'])
         },
         'days': days_and_data['days']
     }
